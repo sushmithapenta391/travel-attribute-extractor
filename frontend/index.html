@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Travel NLU · Attribute Extraction Suite (v6)</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0B0B0D;--panel:#17171A;--card:#1D1D21;--line:#2B2B30;--ink:#F2F2F3;--mut:#93939C;--accent:#E8722C;
+--SOURCE:#1E4D61;--DESTINATION:#1F5A32;--DATE:#66531A;--RETURN_DATE:#4A3666;--PASSENGER:#6B2B47;--CLASS:#453471;--MODE:#6E3A25}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;display:flex;min-height:100vh}
+h1,h2,h3,button,.navlabel{font-family:Sora,sans-serif}
+
+aside{width:230px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--line);padding:20px 14px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:22px}
+.brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
+.brand b{font:700 15px Sora,sans-serif}
+.brand span{color:var(--accent)}
+nav button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:transparent;border:0;color:var(--mut);
+  font:500 13.5px Inter,sans-serif;padding:9px 10px;border-radius:8px;cursor:pointer;margin-bottom:3px}
+nav button:hover{background:var(--card);color:var(--ink)}
+nav button.active{background:var(--accent);color:#1a0d04;font-weight:600}
+.sidebar-note{margin-top:22px;padding:12px;background:var(--card);border:1px solid var(--line);border-radius:8px;font-size:11.5px;color:var(--mut);line-height:1.5}
+
+main{flex:1;padding:34px 36px;max-width:980px}
+.view{display:none}
+.view.active{display:block}
+h1.title{font:700 1.6rem Sora,sans-serif;margin:0 0 4px}
+.sub{color:var(--mut);margin:0 0 22px;font-size:14px}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:16px}
+h2{font:600 1rem Sora,sans-serif;margin:0 0 10px}
+textarea{width:100%;min-height:84px;padding:12px;font:1rem Inter,sans-serif;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;resize:vertical}
+textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+button.primary{font:600 .9rem Sora,sans-serif;border:0;border-radius:8px;padding:10px 20px;background:var(--accent);color:#1a0d04;cursor:pointer}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);font:400 .82rem Inter,sans-serif;padding:7px 13px;border-radius:7px;cursor:pointer}
+.tokens{display:flex;flex-wrap:wrap;gap:8px}
+.tok{padding:6px 10px 4px;border-radius:6px;background:var(--bg);text-align:center;min-width:44px;border:1px solid var(--line)}
+.tok b{display:block;font-weight:400}
+.tok small{display:block;font:600 .65rem Sora,sans-serif;color:var(--mut)}
+.tok select{display:block;margin-top:5px;width:100%;font:600 .62rem ui-monospace,monospace;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:2px 1px}
+.metric-good{color:#4ADE80;font-weight:600}.metric-bad{color:#FF6B5E;font-weight:600}
+[data-theme=light] .metric-good{color:#15803D}[data-theme=light] .metric-bad{color:#C62828}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+th{font:600 .8rem Sora,sans-serif;color:var(--mut)}
+pre{margin:0;padding:14px;background:var(--bg);border-radius:8px;overflow-x:auto;font:.85rem ui-monospace,Consolas,monospace;color:#CDEBDC}
+.err{color:#FF6B5E;margin-top:10px;font-size:13.5px}
+#out{display:none}
+.chip{display:inline-block;padding:2px 9px;border-radius:10px;font:600 .75rem Sora,sans-serif;background:var(--bg);border:1px solid var(--line)}
+.hist-item{padding:10px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13.5px}
+.hist-item:hover{background:var(--bg)}
+.hist-item small{display:block;color:var(--mut);margin-top:3px}
+.labelref td:first-child{color:var(--accent);font-family:ui-monospace,monospace}
+.wrap-x{overflow-x:auto}
+
+:root{--SEAT:#2F4F6F;--MEAL:#3F5F2F;--STOPS:#5F3F3F;--TIME:#1F5A5A;--BUDGET:#5A4A1F;--PASSENGERS:#6B2B47;--PASSENGER_ADULT:#6B2B47;--PASSENGER_CHILD:#7A3550;--PASSENGER_INFANT:#8A405A}
+[data-theme=light]{--bg:#F5F5F7;--panel:#FFFFFF;--card:#FFFFFF;--line:#DADADF;--ink:#17171A;--mut:#6A6A74}
+[data-theme=light] pre{color:#0F5132}
+.hl{line-height:2.1;font-size:1rem}.hl mark{color:#fff;padding:3px 7px;border-radius:5px;margin:0 1px}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.legend span{font:600 .68rem Sora,sans-serif;padding:3px 8px;border-radius:5px;color:#fff}
+.meter{height:10px;background:var(--bg);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:8px 0}
+.meter i{display:block;height:100%;background:var(--accent)}
+.warn{color:#FFB020;font-size:13.5px;margin:4px 0}.ok{color:#4ADE80;font-size:13.5px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.stat b{display:block;font:700 1.5rem Sora,sans-serif;color:var(--accent)}.stat small{color:var(--mut)}
+.bar{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}.bar div{height:12px;background:var(--accent);border-radius:4px}
+input.search{padding:8px 12px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:7px;font:400 .85rem Inter,sans-serif;min-width:200px}
+
+html{color-scheme:dark}
+[data-theme=light]{color-scheme:light;--SEAT:#C9DAF0;--MEAL:#D3EBC0;--STOPS:#F0CFCF;--TIME:#BFEAEA;--BUDGET:#F0E0B5;--SOURCE:#BFE3F2;--DESTINATION:#BDEBCB;--DATE:#F6E3A1;--RETURN_DATE:#DCCBF2;--PASSENGER:#F5C6DA;--PASSENGERS:#F5C6DA;--PASSENGER_ADULT:#F5C6DA;--PASSENGER_CHILD:#F0B5CF;--PASSENGER_INFANT:#EBA3C2;--CLASS:#D4CBF5;--MODE:#F5CDB8}
+[data-theme=light] .hl mark,[data-theme=light] .legend span{color:var(--ink)}
+[data-theme=light] .warn{color:#B45309}[data-theme=light] .ok{color:#15803D}[data-theme=light] .err{color:#C62828}
+[data-theme=light] .tok{box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.pass{color:#4ADE80;font-weight:600}.fail{color:#FF6B5E;font-weight:600}
+[data-theme=light] .pass{color:#15803D}[data-theme=light] .fail{color:#C62828}
+.sugg{margin:6px 0;font-size:13.5px}
+
+/* NEW: printable itinerary / boarding-pass card */
+.bpass{background:linear-gradient(135deg,var(--card),var(--bg));border:1px solid var(--line);border-radius:14px;
+  padding:26px 28px;position:relative;overflow:hidden;max-width:620px}
+.bpass .pass-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px}
+.bpass .pass-top b{font:700 1.3rem Sora,sans-serif}
+.bpass .pass-top span{color:var(--mut);font-size:12.5px;text-transform:uppercase;letter-spacing:.5px}
+.bpass .route{display:flex;align-items:center;gap:10px;margin:16px 0;flex-wrap:wrap}
+.bpass .city{text-align:center}
+.bpass .city b{display:block;font:700 1.6rem Sora,sans-serif}
+.bpass .city small{color:var(--mut);font-size:11px}
+.bpass .plane{color:var(--accent);font-size:20px}
+.bpass .via-chip{font:600 .7rem Sora,sans-serif;background:var(--bg);border:1px dashed var(--line);border-radius:8px;padding:3px 9px;color:var(--mut)}
+.bpass .grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:14px;margin-top:18px;
+  border-top:1px dashed var(--line);padding-top:16px}
+.bpass .grid4 label{display:block;font-size:10.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.bpass .grid4 div{font:600 .95rem Sora,sans-serif}
+.bpass .stub{position:absolute;top:0;right:0;bottom:0;width:4px;background:repeating-linear-gradient(0deg,var(--accent) 0 8px,transparent 8px 16px)}
+/* sidebar: items fill the full page height with equal gaps */
+aside{display:flex;flex-direction:column;padding:20px 14px 24px}
+.brand{margin-bottom:18px;height:36px}
+nav{flex:1;display:flex;flex-direction:column;justify-content:space-between;min-height:0}
+nav button{flex:1;max-height:60px;margin-bottom:0;align-items:center}
+
+/* main: title lines up with the brand row at the top */
+main{padding:20px 36px 34px}
+h1.title{margin:0 0 6px;line-height:36px}
+.sub{margin:0 0 22px;line-height:1.5}
+@media print{
+  body *{visibility:hidden}
+  #printArea,#printArea *{visibility:visible}
+  #printArea{position:absolute;top:0;left:0;width:100%}
+  aside,.row,section > h2 + p + .row{display:none !important}
+}
+</style>
+</head>
+<body>
+
+<aside>
+  <div class="brand"><span class="dot"></span><b>Travel<span>NLU</span></b></div>
+  <nav>
+    <button data-view="extract" class="active">Extractor</button>
+    <button data-view="batch">Batch Extractor</button>
+    <button data-view="labels">Label Reference</button>
+    <button data-view="history">History</button>
+    <button data-view="dashboard">Dashboard</button>
+    <button data-view="eval">Evaluation</button>
+    <button data-view="itinerary">Itinerary</button>
+    <button data-view="destination">Destination Guide</button>
+    <button data-view="annotate">Annotate</button>
+    <button id="themeBtn">Light Mode</button>
+  </nav>
+</aside>
+
+<main>
+
+  <div class="view active" id="view-extract">
+    <h1 class="title">Travel Attribute Extractor</h1>
+    <section>
+      <textarea id="text">Book a flight from Hyderabad to Delhi with 2 adults and 1 child on 25 September, returning on 2 October, in economy class</textarea>
+      <div class="row">
+        <button class="primary" id="go">Extract</button>
+        <button class="ghost" data-ex="I want to fly from Vizag to Bangalore tomorrow">Example 1</button>
+        <button class="ghost" data-ex="Need a train from Chennai to Mumbai on 12 October for 3 people">Example 2</button>
+        <button class="ghost" data-ex="Book a flight not from Delhi, from Hyderabad to Mumbai on 25 September">Example 3 (negation)</button>
+        <button class="ghost" id="mic">🎤 Speak</button>
+      </div>
+      <div id="cityHints" class="row" style="margin-top:8px"></div>
+      <div id="err" class="err" role="alert"></div>
+    </section>
+    <div id="out">
+      <section><h2>Tokens and BIO labels</h2><div id="tokens" class="tokens"></div></section>
+      <section><h2>Extracted attributes</h2>
+        <table><thead><tr><th>Attribute</th><th>Value</th></tr></thead><tbody id="attrs"></tbody></table></section>
+      <section><h2>Structured output</h2><pre id="json"></pre>
+        <div class="row"><button class="ghost" id="copy">Copy JSON</button></div></section>
+    </div>
+  </div>
+
+  <div class="view" id="view-batch">
+    <h1 class="title">Batch Extractor</h1>
+    <p class="sub">Paste several travel requests, one per line. Each line is extracted and shown as a table row.</p>
+    <section>
+      <textarea id="batchText" style="min-height:140px">Book a flight from Hyderabad to Delhi on 25 September for 2 passengers
+I want to fly from Vizag to Bangalore tomorrow
+Need a train from Chennai to Mumbai on 12 October for 3 people
+Book a bus from Pune to Goa on Friday</textarea>
+      <div class="row">
+        <button class="primary" id="batchGo">Extract All</button>
+        <button class="ghost" id="batchCsv">Download CSV</button>
+        <button class="ghost" id="batchJson">Download JSON</button>
+        <label class="ghost" style="cursor:pointer">Upload .txt <input type="file" id="batchFile" accept=".txt,.csv" hidden></label>
+      </div>
+      <div id="batchErr" class="err"></div>
+    </section>
+    <section class="wrap-x">
+      <table id="batchTable"><thead><tr><th>Sentence</th><th>Mode</th><th>Source</th><th>Destination</th><th>Date</th><th>Return</th><th>Passengers</th><th>Class</th></tr></thead><tbody></tbody></table>
+    </section>
+  </div>
+
+  <div class="view" id="view-labels">
+    <h1 class="title">BIO Label Reference</h1>
+    
+    <section class="wrap-x">
+      <table class="labelref">
+        <thead><tr><th>Label</th><th>Meaning</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td>B/I-SOURCE</td><td>Departure city</td><td>"from <b>Hyderabad</b>"</td></tr>
+          <tr><td>B/I-DESTINATION</td><td>Arrival city</td><td>"to <b>Delhi</b>"</td></tr>
+          <tr><td>B/I-DATE</td><td>Outbound travel date</td><td>"on <b>25 September</b>"</td></tr>
+          <tr><td>B/I-RETURN_DATE</td><td>Return-leg date</td><td>"returning on <b>2 October</b>"</td></tr>
+          <tr><td>B-PASSENGERS</td><td>Generic passenger count</td><td>"<b>2 passengers</b>"</td></tr>
+          <tr><td>B-PASSENGER_ADULT</td><td>Adult count</td><td>"<b>2 adults</b>"</td></tr>
+          <tr><td>B-PASSENGER_CHILD</td><td>Child count</td><td>"<b>1 child</b>"</td></tr>
+          <tr><td>B-PASSENGER_INFANT</td><td>Infant count</td><td>"<b>1 infant</b>"</td></tr>
+          <tr><td>B/I-CLASS</td><td>Travel class</td><td>"<b>economy class</b>"</td></tr>
+          <tr><td>B/I-TIME</td><td>Time of travel</td><td>"tomorrow <b>morning</b>", "<b>6 pm</b>"</td></tr>
+          <tr><td>B-BUDGET</td><td>Maximum budget (INR)</td><td>"under <b>8000</b>"</td></tr>
+          <tr><td>B/I-SEAT</td><td>Seat preference</td><td>"<b>window seat</b>"</td></tr>
+          <tr><td>B/I-MEAL</td><td>Meal preference</td><td>"<b>veg meal</b>", "<b>non-veg</b>"</td></tr>
+          <tr><td>B/I-STOPS</td><td>Non-stop / direct request</td><td>"<b>non-stop</b> flight"</td></tr>
+          <tr><td>B-MODE</td><td>Transport mode</td><td>"<b>flight</b> from..."</td></tr>
+          <tr><td>O</td><td>Not part of any entity</td><td>"book a", "with", "in"</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section>
+      <h2>Negation handling</h2>
+      <p class="sub" style="margin:0">A city right after "not" (optionally after from/to) is detected and excluded from SOURCE/DESTINATION, so "not from Delhi, from Hyderabad" correctly keeps only Hyderabad.</p>
+    </section>
+  </div>
+
+  <div class="view" id="view-history">
+    <h1 class="title">History</h1>
+    <p class="sub">Every sentence you've extracted this session. Click one to reopen it in the Extractor tab. Saved in this browser.</p>
+    <section><div class="row" style="margin:0 0 10px"><input class="search" id="histSearch" placeholder="Search history...">
+        <button class="ghost" id="histExport">Export JSON</button><button class="ghost" id="histClear">Clear all</button></div>
+      <div id="histList"></div></section>
+  </div>
+
+  <div class="view" id="view-eval">
+    <h1 class="title">Evaluation</h1>
+    <p class="sub">Built-in test sentences with expected answers. Run them to measure how accurate the tagger is (handy for the project report / viva).</p>
+    <section><div class="row" style="margin:0"><button class="primary" id="evalGo">Run all tests</button></div>
+      <div class="stats" id="evalStats" style="margin-top:14px"></div></section>
+    <section class="wrap-x"><table id="evalTable"><thead><tr><th>#</th><th>Sentence</th><th>Checks</th><th>Result</th></tr></thead><tbody></tbody></table></section>
+    <section class="wrap-x">
+      <h2>Per-entity Precision / Recall / F1</h2>
+      <p class="sub" style="margin:0 0 10px">Computed over every test sentence above: how reliable the tagger is for each attribute type specifically, not just sentence-by-sentence. This table is the format a research report / case study typically asks for.</p>
+      <table id="metricsTable"><thead><tr><th>Entity</th><th>TP</th><th>FP</th><th>FN</th><th>Precision</th><th>Recall</th><th>F1</th></tr></thead><tbody></tbody></table>
+      <p class="sub" id="metricsAvg" style="margin:10px 0 0"></p>
+    </section>
+  </div>
+
+  <div class="view" id="view-dashboard">
+    <h1 class="title">Dashboard</h1>
+    <p class="sub">Live statistics from everything extracted this session.</p>
+    <div class="stats" id="dashStats"></div>
+    <section><h2>Top routes</h2><div id="dashRoutes"></div></section>
+    <section><h2>Transport modes</h2><div id="dashModes"></div></section>
+    <section><h2>Travel classes</h2><div id="dashClass"></div></section>
+  </div>
+
+  <div class="view" id="view-itinerary">
+    <h1 class="title">Printable Itinerary</h1>
+    <p class="sub">A boarding-pass style summary of your last extraction (supports multi-leg routes with via stops). Print or save as PDF.</p>
+    <div class="row" style="margin:0 0 16px"><button class="primary" id="itinPrint">Print / Save as PDF</button> <button class="ghost" id="itinIcs">Add to calendar (.ics)</button></div>
+    <div id="printArea"><div class="bpass" id="itinCard"></div></div>
+  </div>
+
+  <div class="view" id="view-destination">
+    <h1 class="title">Destination Guide</h1>
+    <p class="sub">Type any city directly — top places, local food and a suggested kind of stay. A standalone offline reference guide, not a live booking API.</p>
+    <section>
+      <div class="row" style="margin:0">
+        <input class="search" id="destCityInput" placeholder="Type a city, e.g. Goa, Dubai, Paris..." style="min-width:260px">
+        <button class="primary" id="destGo">Get guide</button>
+      </div>
+      <div id="destCityHints" class="row" style="margin-top:8px"></div>
+      <div id="destErr" class="err"></div>
+    </section>
+    <section id="destResult" style="display:none"></section>
+  </div>
+
+  <div class="view" id="view-annotate">
+    <h1 class="title">BIO Dataset Annotation</h1>
+    <p class="sub">Type a sentence, correct the auto-suggested BIO tags, and build a labelled dataset. This is exactly the data format needed to fine-tune a real RoBERTa token-classification model — the next step the project report can point to beyond this rule-based tagger.</p>
+    <section>
+      <textarea id="annotText" style="min-height:60px">Book a flight from Hyderabad to Delhi on 25 September for 2 passengers in economy class</textarea>
+      <div class="row"><button class="primary" id="annotLoad">Tokenize &amp; suggest tags</button></div>
+      <div id="annotErr" class="err"></div>
+    </section>
+    <section id="annotEditor" style="display:none">
+      <h2>Correct the tags</h2>
+      <p class="sub" style="margin:0 0 12px">Auto-tagged by the current extractor as a starting point. Fix any wrong label using the dropdown under each word, then add it to the dataset.</p>
+      <div class="tokens" id="annotTokens"></div>
+      <div class="row"><button class="primary" id="annotAdd">Add to dataset</button><button class="ghost" id="annotCancel">Discard</button></div>
+    </section>
+    <section>
+      <div class="row" style="margin:0 0 4px"><h2 style="margin:0">Dataset — <span id="annotCount">0</span> sentence(s)</h2></div>
+      <div class="row" style="margin:0 0 12px">
+        <button class="ghost" id="annotExportJsonl">Export JSONL</button>
+        <button class="ghost" id="annotExportConll">Export CoNLL</button>
+        <button class="ghost" id="annotClear">Clear dataset</button>
+      </div>
+      <div id="annotList"></div>
+    </section>
+  </div>
+
+</main>
+
+<script>
+const API = "http://127.0.0.1:5000/api/extract";
+const $ = id => document.getElementById(id);
+let HISTORY = [];
+
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("nav button").forEach(x => x.classList.remove("active"));
+  document.querySelectorAll(".view").forEach(x => x.classList.remove("active"));
+  b.classList.add("active");
+  $("view-" + b.dataset.view).classList.add("active");
+  if (b.dataset.view === "history") renderHistory();
+});
+
+async function callExtract(text) {
+  const r = await fetch(API, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({text})});
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || "extract failed");
+  return d;
+}
+
+async function run() {
+  $("err").textContent = "";
+  const text = $("text").value.trim();
+  if (!text) return;
+  try {
+    const d = await callExtract(text);
+    $("tokens").innerHTML = d.tokens.map(x => {
+      const ent = x.tag === "O" ? "" : x.tag.slice(2);
+      const bg = ent ? `background:var(--${ent},var(--bg))` : "";
+      return `<div class="tok" style="${bg}"><b>${x.token}</b><small>${x.tag}</small></div>`;
+    }).join("");
+    const keys = Object.keys(d.attributes);
+    $("attrs").innerHTML = keys.length
+      ? keys.map(k => `<tr><td><span class="chip">${k}</span></td><td>${d.attributes[k]}</td></tr>`).join("")
+      : `<tr><td colspan="2">No travel details found.</td></tr>`;
+    $("json").textContent = JSON.stringify(d.attributes, null, 2);
+    $("out").style.display = "block";
+    HISTORY.unshift({text, attrs: d.attributes, ts: new Date().toLocaleTimeString()});
+  } catch (e) {
+    $("err").textContent = "Cannot reach the backend. Start it with: python app.py (in the backend folder).";
+  }
+}
+$("go").onclick = run;
+$("text").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); run(); } });
+document.querySelectorAll("#view-extract [data-ex]").forEach(b => b.onclick = () => { $("text").value = b.dataset.ex; run(); });
+$("copy").onclick = () => navigator.clipboard.writeText($("json").textContent);
+
+async function runBatch() {
+  $("batchErr").textContent = "";
+  const lines = $("batchText").value.split("\n").map(l => l.trim()).filter(Boolean);
+  const tbody = document.querySelector("#batchTable tbody");
+  tbody.innerHTML = "";
+  for (const line of lines) {
+    try {
+      const d = await callExtract(line);
+      const a = d.attributes;
+      tbody.insertAdjacentHTML("beforeend",
+        `<tr><td>${line}</td><td>${a.mode||""}</td><td>${a.source||""}</td><td>${a.destination||""}</td>` +
+        `<td>${a.date||""}</td><td>${a.return_date||""}</td><td>${a.passengers||""}</td><td>${a.class||""}</td></tr>`);
+      HISTORY.unshift({text: line, attrs: a, ts: new Date().toLocaleTimeString()});
+    } catch (e) {
+      tbody.insertAdjacentHTML("beforeend", `<tr><td>${line}</td><td colspan="7" class="err">backend unreachable</td></tr>`);
+      $("batchErr").textContent = "Cannot reach the backend. Start it with: python app.py";
+      break;
+    }
+  }
+}
+$("batchGo").onclick = runBatch;
+$("batchCsv").onclick = () => {
+  const rows = [["sentence","mode","source","destination","date","return_date","passengers","class"]];
+  document.querySelectorAll("#batchTable tbody tr").forEach(tr => rows.push([...tr.children].map(td => td.textContent)));
+  const csv = rows.map(r => r.map(c => `"${(c||"").replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], {type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "travel-extractions.csv"; a.click();
+};
+
+function renderHistory() {
+  $("histList").innerHTML = HISTORY.length
+    ? HISTORY.map((h,i) => `<div class="hist-item" data-i="${i}">${h.text}<small>${h.ts} · ${Object.keys(h.attrs).length} attributes found</small></div>`).join("")
+    : `<p class="sub" style="margin:0">No extractions yet. Try the Extractor or Batch Extractor tab.</p>`;
+  document.querySelectorAll(".hist-item").forEach(el => el.onclick = () => {
+    const h = HISTORY[el.dataset.i];
+    document.querySelector('nav button[data-view="extract"]').click();
+    $("text").value = h.text;
+    run();
+  });
+}
+</script>
+<script>
+/* ---- v3 extras: runs on top of the original script, nothing above is edited ---- */
+const LABELS = ["SOURCE","DESTINATION","DATE","RETURN_DATE","PASSENGERS","PASSENGER_ADULT","PASSENGER_CHILD","PASSENGER_INFANT","CLASS","MODE","TIME","BUDGET","SEAT","MEAL","STOPS"];
+const ANALYZE = API.replace("/extract", "/analyze");
+const esc = s => String(s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+// hook: after every extraction on the Extractor tab, fetch the extra analysis
+const _origExtract = callExtract;
+callExtract = async function(text) {
+  const d = await _origExtract(text);
+  if ($("view-extract").classList.contains("active")) enhance(text).catch(() => {});
+  return d;
+};
+
+async function enhance(text) {
+  const r = await fetch(ANALYZE, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({text})});
+  const d = await r.json();
+  let box = $("extras");
+  if (!box) { box = document.createElement("div"); box.id = "extras"; $("out").appendChild(box); }
+  const hl = d.tokens.map(t => t.tag === "O" ? esc(t.token) : `<mark style="background:var(--${t.tag.slice(2)},#444)">${esc(t.token)}</mark>`).join(" ");
+  const legend = LABELS.map(l => `<span style="background:var(--${l})">${l}</span>`).join("");
+  const warns = d.warnings.length ? d.warnings.map(w => `<div class="warn">⚠ ${esc(w)}</div>`).join("") : `<div class="ok">✔ No problems found in this request.</div>`;
+  const dates = Object.entries(d.iso_dates).filter(([,v]) => v).map(([k,v]) => `<tr><td><span class="chip">${k}</span></td><td>${v}</td></tr>`).join("");
+  box.innerHTML = `
+    <section><h2>Highlighted sentence</h2><div class="hl">${hl}</div><div class="legend">${legend}</div></section>
+    <section><h2>Trip summary</h2><p style="margin:0 0 8px">${esc(d.summary)}</p>
+      <small style="color:var(--mut)">Completeness: ${d.completeness}%${d.round_trip ? " · Round trip" : " · One way"}${d.trip_days != null ? " · " + d.trip_days + " day(s) away" : ""}</small>
+      <div class="meter"><i style="width:${d.completeness}%"></i></div>
+      <div class="row"><button class="ghost" id="copySum">Copy summary</button></div></section>
+    <section><h2>Validation checks</h2>${warns}</section>
+    ${dates ? `<section><h2>Resolved dates (ISO)</h2><table><tbody>${dates}</tbody></table></section>` : ""}`;
+  $("copySum").onclick = () => navigator.clipboard.writeText(d.summary);
+}
+
+// theme toggle
+$("themeBtn").onclick = () => {
+  const el = document.documentElement;
+  el.dataset.theme = el.dataset.theme === "light" ? "dark" : "light";
+};
+
+// voice input
+(() => {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { $("mic").style.display = "none"; return; }
+  $("mic").onclick = () => {
+    const rec = new SR(); rec.lang = "en-IN";
+    $("mic").textContent = "🎤 Listening...";
+    rec.onresult = e => { $("text").value = e.results[0][0].transcript; $("go").click(); };
+    rec.onend = () => $("mic").textContent = "🎤 Speak";
+    rec.start();
+  };
+})();
+
+// batch: upload + JSON
+$("batchFile").onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { $("batchText").value = rd.result; };
+  rd.readAsText(f);
+};
+$("batchJson").onclick = () => {
+  const keys = ["sentence","mode","source","destination","date","return_date","passengers","class"];
+  const rows = [...document.querySelectorAll("#batchTable tbody tr")].map(tr => Object.fromEntries([...tr.children].map((td,i) => [keys[i], td.textContent])));
+  download("travel-extractions.json", JSON.stringify(rows, null, 2), "application/json");
+};
+function download(name, content, type) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([content], {type})); a.download = name; a.click();
+}
+
+// history: search / export / clear
+$("histSearch").oninput = e => {
+  const q = e.target.value.toLowerCase();
+  document.querySelectorAll(".hist-item").forEach(el => el.style.display = el.textContent.toLowerCase().includes(q) ? "" : "none");
+};
+$("histExport").onclick = () => download("history.json", JSON.stringify(HISTORY, null, 2), "application/json");
+$("histClear").onclick = () => { HISTORY.length = 0; renderHistory(); };
+
+// dashboard
+function countBy(arr) { const m = {}; arr.filter(Boolean).forEach(x => m[x] = (m[x]||0)+1); return Object.entries(m).sort((a,b) => b[1]-a[1]); }
+function bars(entries) {
+  if (!entries.length) return `<p class="sub" style="margin:0">No data yet.</p>`;
+  const max = entries[0][1];
+  return entries.slice(0,6).map(([k,v]) => `<div class="bar"><span style="min-width:150px">${esc(k)}</span><div style="width:${Math.round(v/max*220)+10}px"></div>${v}</div>`).join("");
+}
+function renderDash() {
+  const H = HISTORY.map(h => h.attrs);
+  const pax = H.reduce((s,a) => s + (Number(a.passengers)||0), 0);
+  const rt = H.filter(a => a.return_date).length;
+  const avg = H.length ? (H.reduce((s,a) => s + Object.keys(a).length, 0) / H.length).toFixed(1) : 0;
+  $("dashStats").innerHTML = [[H.length,"Extractions"],[avg,"Avg attributes"],[pax,"Total passengers"],[rt,"Round trips"]]
+    .map(([v,l]) => `<div class="stat"><b>${v}</b><small>${l}</small></div>`).join("");
+  $("dashRoutes").innerHTML = bars(countBy(H.filter(a => a.source && a.destination).map(a => a.source + " → " + a.destination)));
+  $("dashModes").innerHTML = bars(countBy(H.map(a => a.mode)));
+  $("dashClass").innerHTML = bars(countBy(H.map(a => a.class)));
+}
+document.querySelector('nav button[data-view="dashboard"]').addEventListener("click", renderDash);
+
+// itinerary: render the latest extraction as a boarding-pass card
+function renderItinerary() {
+  const latest = HISTORY[0];
+  const card = $("itinCard");
+  if (!latest || !latest.attrs || (!latest.attrs.source && !latest.attrs.destination)) {
+    card.innerHTML = `<p class="sub" style="margin:0">No extraction yet. Go to <b>Extractor</b>, run a sentence with a source and destination, then come back here.</p>`;
+    return;
+  }
+  const a = latest.attrs;
+  const via = Array.isArray(a.via) ? a.via : (a.via ? [a.via] : []);
+  const cities = [a.source, ...via, a.destination].filter(Boolean);
+  const route = cities.map((c, i) => {
+    const tagLabel = i === 0 ? "FROM" : (i === cities.length - 1 ? "TO" : "VIA");
+    const plane = i < cities.length - 1 ? `<span class="plane">&#9992;</span>` : "";
+    return `<div class="city"><b>${esc(c)}</b><small>${tagLabel}</small></div>${plane}`;
+  }).join("");
+
+  const fields = [["Date", a.date], ["Return", a.return_date], ["Passengers", a.passengers], ["Class", a.class], ["Time", a.time], ["Budget", a.budget ? "₹" + a.budget : ""], ["Stops", a.stops], ["Seat", a.seat], ["Meal", a.meal]]
+    .filter(([, v]) => v);
+
+  card.innerHTML = `
+    <div class="stub"></div>
+    <div class="pass-top"><b>${esc((a.mode || "TRIP").toString().toUpperCase())} ITINERARY</b><span>Boarding Pass</span></div>
+    <div class="route">${route}</div>
+    <div class="grid4">${fields.map(([label, v]) => `<div><label>${label}</label><div>${esc(v)}</div></div>`).join("")}</div>
+  `;
+}
+document.querySelector('nav button[data-view="itinerary"]').addEventListener("click", renderItinerary);
+$("itinPrint").onclick = () => { renderItinerary(); window.print(); };
+</script>
+<script>
+/* ---- v4 extras ---- */
+const TESTS = [
+ {s:"Book a flight from Hyderabad to Delhi on 25 September for 2 passengers", e:{mode:"flight",source:"Hyderabad",destination:"Delhi",date:"25 September",passengers:2}},
+ {s:"I want to fly from Vizag to Bangalore tomorrow", e:{source:"Vizag",destination:"Bangalore",date:"tomorrow"}},
+ {s:"Need a train from Chennai to Mumbai on 12 October for 3 people", e:{mode:"train",source:"Chennai",destination:"Mumbai",date:"12 October",passengers:3}},
+ {s:"Book a flight not from Delhi, from Hyderabad to Mumbai on 25 September", e:{mode:"flight",source:"Hyderabad",destination:"Mumbai",date:"25 September"}},
+ {s:"Flight from Pune to Goa returning on 2 October", e:{source:"Pune",destination:"Goa",return_date:"2 October"}},
+ {s:"Book a bus from Pune to Goa on Friday", e:{mode:"bus",source:"Pune",destination:"Goa",date:"Friday"}},
+ {s:"Book a flight from Hyderabad to Delhi with 2 adults and 1 child in economy class", e:{adults:2,children:1,passengers:3,class:"economy class"}},
+ {s:"Need a cab from Kolkata to Patna today", e:{mode:"cab",source:"Kolkata",destination:"Patna",date:"today"}},
+ {s:"Train from Delhi to Jaipur on 5th November for 4 travellers", e:{mode:"train",source:"Delhi",destination:"Jaipur",date:"5th November",passengers:4}},
+ {s:"Book business class flight from Mumbai to Dubai on 10/11/2026", e:{mode:"flight",source:"Mumbai",destination:"Dubai",date:"10/11/2026",class:"business class"}},
+ {s:"I need 1 infant and 2 adults to travel from Chennai to Colombo", e:{infants:1,adults:2,passengers:3,source:"Chennai",destination:"Colombo"}},
+ {s:"Not to Goa, take me to Jaipur by bus", e:{destination:"Jaipur",mode:"bus"}},
+ {s:"Flight from Hyderabad to Delhi tomorrow morning under 8000", e:{source:"Hyderabad",destination:"Delhi",date:"tomorrow",time:"morning",budget:"8000"}},
+ {s:"Train from Chennai to Mumbai on 12 October at 6 pm", e:{source:"Chennai",destination:"Mumbai",date:"12 October",time:"6 pm"}},
+ {s:"Book a non-stop flight from Delhi to Dubai with a window seat and veg meal", e:{stops:"non-stop",seat:"window seat",meal:"veg meal",source:"Delhi",destination:"Dubai"}},
+ {s:"Direct flight from Pune to Goa tomorrow, non-veg meal", e:{stops:"direct",meal:"non-veg meal",date:"tomorrow"}}
+];
+
+// theme: remember choice
+(() => {
+  const lab = () => { $("themeBtn").textContent = document.documentElement.dataset.theme === "light" ? "Dark Mode" : "Light Mode"; };
+  const set = t => { document.documentElement.dataset.theme = t; lab(); try { localStorage.setItem("tnlu_theme", t); } catch(e) {} };
+  try { const t = localStorage.getItem("tnlu_theme"); if (t) document.documentElement.dataset.theme = t; } catch(e) {}
+  lab();
+  $("themeBtn").onclick = () => set(document.documentElement.dataset.theme === "light" ? "dark" : "light");
+})();
+
+// history: persist in browser
+try { HISTORY.push(...JSON.parse(localStorage.getItem("tnlu_hist") || "[]")); } catch(e) {}
+const saveHist = () => { try { localStorage.setItem("tnlu_hist", JSON.stringify(HISTORY.slice(0, 200))); } catch(e) {} };
+window.addEventListener("beforeunload", saveHist); setInterval(saveHist, 3000);
+
+// insights (fare / distance / spelling) appended after the v3 extras
+const _enhV3 = enhance;
+enhance = async function(text) {
+  await _enhV3(text);
+  const r = await fetch(API.replace("/extract", "/insights"), {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({text})});
+  const d = await r.json(), box = $("extras");
+  if (!box || !r.ok) return;
+  let html = "";
+  if (d.suggestions.length) html += `<section><h2>Did you mean?</h2>` + d.suggestions.map(s =>
+    `<div class="sugg">"${esc(s.token)}" → <button class="ghost fix" data-t="${esc(s.token)}" data-s="${esc(s.suggest)}">${esc(s.suggest)}</button></div>`).join("") + `</section>`;
+  if (d.estimates.length) html += `<section><h2>Distance and fare estimate</h2>
+    <p class="sub" style="margin:0 0 10px">About ${d.distance_km} km apart${d.round_trip ? " · round-trip fare" : ""}. Indicative only, not live prices.</p>
+    <table><thead><tr><th>Mode</th><th>Duration</th><th>Estimated fare</th>${d.estimates.some(e => "fits_budget" in e) ? "<th>Budget</th>" : ""}</tr></thead><tbody>` +
+    d.estimates.map(e => `<tr><td><span class="chip">${e.mode}</span></td><td>${e.duration}</td><td>₹${e.fare_min.toLocaleString("en-IN")} – ₹${e.fare_max.toLocaleString("en-IN")}</td>${"fits_budget" in e ? `<td class="${e.fits_budget ? "pass" : "fail"}">${e.fits_budget ? "Fits" : "Over"}</td>` : ""}</tr>`).join("") + `</tbody></table></section>`;
+  if (html) box.insertAdjacentHTML("beforeend", html);
+  box.querySelectorAll(".fix").forEach(b => b.onclick = () => {
+    $("text").value = $("text").value.replace(new RegExp("\\b" + b.dataset.t + "\\b", "gi"), b.dataset.s);
+    $("go").click();
+  });
+};
+
+// city autocomplete (uses /api/cities)
+(() => {
+  const box = $("cityHints"); let timer;
+  $("text").addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      const m = $("text").value.match(/([A-Za-z]{3,})$/);
+      if (!m) { box.innerHTML = ""; return; }
+      try {
+        const list = await (await fetch(API.replace("/extract", "/cities") + "?q=" + encodeURIComponent(m[1]))).json();
+        box.innerHTML = list.map(c => `<button class="ghost" data-c="${esc(c)}">${esc(c)}</button>`).join("");
+        box.querySelectorAll("button").forEach(b => b.onclick = () => {
+          $("text").value = $("text").value.replace(/[A-Za-z]{3,}$/, b.dataset.c) + " ";
+          box.innerHTML = ""; $("text").focus();
+        });
+      } catch (e) { box.innerHTML = ""; }
+    }, 150);
+  });
+})();
+
+// ---- Destination Guide (standalone tab — not tied to any extraction) ----
+function renderDestGuide(d, queried) {
+  const box = $("destResult");
+  box.style.display = "block";
+  if (!d.found) {
+    box.innerHTML = `<p class="sub" style="margin:0">No guide available yet for "${esc(queried)}". Try a city the extractor already knows, e.g. Hyderabad, Goa, Dubai, Singapore, Paris, Kathmandu...</p>`;
+    return;
+  }
+  box.innerHTML = `
+    <h2 style="margin:0 0 4px">${esc(d.city)}, ${esc(d.country)}${d.region ? " · " + esc(d.region) : ""}</h2>
+    <p style="margin:14px 0 6px"><b>Top places</b></p>
+    <div class="row" style="margin:0 0 12px">${d.places.map(p => `<span class="chip">${esc(p)}</span>`).join(" ")}</div>
+    <p style="margin:0 0 6px"><b>Local food to try</b></p>
+    <div class="row" style="margin:0 0 12px">${d.food.map(f => `<span class="chip">${esc(f)}</span>`).join(" ")}</div>
+    <p style="margin:0 0 6px"><b>Suggested stay type</b></p>
+    <div class="row">${d.stay_types.map(s => `<span class="chip">${esc(s)}</span>`).join(" ")}</div>`;
+}
+
+$("destGo").onclick = async () => {
+  $("destErr").textContent = "";
+  $("destResult").style.display = "none";
+  const city = $("destCityInput").value.trim();
+  if (!city) return;
+  try {
+    const d = await (await fetch(API.replace("/extract", "/destination") + "?city=" + encodeURIComponent(city))).json();
+    renderDestGuide(d, city);
+  } catch (e) {
+    $("destErr").textContent = "Cannot reach the backend. Start it with: python app.py";
+  }
+};
+$("destCityInput").addEventListener("keydown", e => { if (e.key === "Enter") $("destGo").click(); });
+
+// autocomplete for the Destination Guide's own input (separate from the Extractor's)
+(() => {
+  const box = $("destCityHints"); let timer;
+  $("destCityInput").addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      const q = $("destCityInput").value.trim();
+      if (q.length < 2) { box.innerHTML = ""; return; }
+      try {
+        const list = await (await fetch(API.replace("/extract", "/cities") + "?q=" + encodeURIComponent(q))).json();
+        box.innerHTML = list.map(c => `<button class="ghost" data-c="${esc(c)}">${esc(c)}</button>`).join("");
+        box.querySelectorAll("button").forEach(b => b.onclick = () => {
+          $("destCityInput").value = b.dataset.c;
+          box.innerHTML = "";
+          $("destGo").click();
+        });
+      } catch (e) { box.innerHTML = ""; }
+    }, 150);
+  });
+})();
+
+// calendar export: last extraction -> .ics (all-day events for trip and return)
+$("itinIcs").onclick = async () => {
+  const latest = HISTORY[0];
+  if (!latest) { alert("Run an extraction first."); return; }
+  try {
+    const d = await (await fetch(ANALYZE, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({text: latest.text})})).json();
+    const a = d.attributes, ymd = s => s.replace(/-/g, "");
+    if (!d.iso_dates.date && !d.iso_dates.return_date) { alert("No travel date found in the last extraction."); return; }
+    const next = s => { const x = new Date(s + "T00:00:00Z"); x.setUTCDate(x.getUTCDate() + 1); return x.toISOString().slice(0, 10).replace(/-/g, ""); };
+    const stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
+    const ev = (iso, title) => iso ? ["BEGIN:VEVENT", "UID:" + ymd(iso) + "-" + Date.now() + "@travelnlu", "DTSTAMP:" + stamp,
+      "DTSTART;VALUE=DATE:" + ymd(iso), "DTEND;VALUE=DATE:" + next(iso), "SUMMARY:" + title, "END:VEVENT"] : [];
+    const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//TravelNLU//EN",
+      ...ev(d.iso_dates.date, `${a.mode || "Trip"}: ${a.source || "?"} to ${a.destination || "?"}`),
+      ...ev(d.iso_dates.return_date, `Return: ${a.destination || "?"} to ${a.source || "?"}`), "END:VCALENDAR"];
+    download("trip.ics", lines.join("\r\n"), "text/calendar");
+  } catch (e) { alert("Cannot reach the backend."); }
+};
+
+// evaluation tab
+// Per-entity metrics convention (standard for NER/token-classification evaluation):
+//   TP: expected had this attribute AND the extractor got the same value
+//   FN: expected had this attribute but the extractor missed it / got it wrong
+//   FP: the extractor produced this attribute but it was wrong or not expected at all
+// A wrong-value case (attribute present on both sides but values differ) counts as
+// one FN (missed the correct answer) AND one FP (produced a spurious wrong answer) —
+// this is exactly what makes Precision and Recall diverge when a tagger is confidently wrong.
+const METRIC_SKIP = new Set(["via", "legs"]);   // non-scalar fields: not evaluated as a single entity
+
+function bumpMetric(store, label, kind) {
+  const m = store[label] = store[label] || {tp: 0, fp: 0, fn: 0};
+  m[kind]++;
+}
+
+$("evalGo").onclick = async () => {
+  const tb = document.querySelector("#evalTable tbody"); tb.innerHTML = "";
+  let passed = 0, fieldOk = 0, fieldAll = 0;
+  const metrics = {};
+  for (let i = 0; i < TESTS.length; i++) {
+    const t = TESTS[i];
+    try {
+      const got = (await callExtract(t.s)).attributes;
+      const checks = Object.entries(t.e).map(([k, v]) => {
+        const ok = String(got[k] ?? "").toLowerCase() === String(v).toLowerCase();
+        fieldAll++; if (ok) fieldOk++;
+        return `<span class="${ok ? "pass" : "fail"}">${ok ? "✔" : "✘"}</span> ${k}: ${esc(got[k] ?? "—")}${ok ? "" : " (expected " + esc(v) + ")"}`;
+      });
+      const all = !checks.some(c => c.includes('class="fail"'));
+      if (all) passed++;
+      tb.insertAdjacentHTML("beforeend", `<tr><td>${i+1}</td><td>${esc(t.s)}</td><td>${checks.join("<br>")}</td><td class="${all ? "pass" : "fail"}">${all ? "PASS" : "FAIL"}</td></tr>`);
+
+      // per-entity P/R/F1 bookkeeping
+      const keys = new Set([...Object.keys(t.e), ...Object.keys(got)]);
+      keys.forEach(k => {
+        if (METRIC_SKIP.has(k)) return;
+        const expStr = k in t.e ? String(t.e[k]).toLowerCase() : null;
+        const gotStr = (k in got && got[k] !== undefined && got[k] !== "") ? String(got[k]).toLowerCase() : null;
+        if (expStr !== null && gotStr !== null && expStr === gotStr) {
+          bumpMetric(metrics, k, "tp");
+        } else {
+          if (expStr !== null) bumpMetric(metrics, k, "fn");
+          if (gotStr !== null) bumpMetric(metrics, k, "fp");
+        }
+      });
+    } catch (e) {
+      tb.insertAdjacentHTML("beforeend", `<tr><td>${i+1}</td><td>${esc(t.s)}</td><td class="err" colspan="2">backend unreachable</td></tr>`); break;
+    }
+  }
+  $("evalStats").innerHTML = [[`${passed}/${TESTS.length}`,"Sentences passed"],[fieldAll ? Math.round(fieldOk/fieldAll*100) + "%" : "–","Field accuracy"],[fieldAll,"Fields checked"]]
+    .map(([v,l]) => `<div class="stat"><b>${v}</b><small>${l}</small></div>`).join("");
+
+  const mtb = document.querySelector("#metricsTable tbody"); mtb.innerHTML = "";
+  const labels = Object.keys(metrics).sort();
+  let sumP = 0, sumR = 0, sumF1 = 0;
+  labels.forEach(k => {
+    const m = metrics[k];
+    const p = (m.tp + m.fp) ? m.tp / (m.tp + m.fp) : (m.tp || m.fn ? 0 : 1);
+    const r = (m.tp + m.fn) ? m.tp / (m.tp + m.fn) : (m.tp || m.fp ? 0 : 1);
+    const f1 = (p + r) ? 2 * p * r / (p + r) : 0;
+    sumP += p; sumR += r; sumF1 += f1;
+    const cls = v => v >= 0.8 ? "metric-good" : (v < 0.5 ? "metric-bad" : "");
+    mtb.insertAdjacentHTML("beforeend", `<tr><td><span class="chip">${esc(k)}</span></td><td>${m.tp}</td><td>${m.fp}</td><td>${m.fn}</td>` +
+      `<td class="${cls(p)}">${(p*100).toFixed(0)}%</td><td class="${cls(r)}">${(r*100).toFixed(0)}%</td><td class="${cls(f1)}">${(f1*100).toFixed(0)}%</td></tr>`);
+  });
+  $("metricsAvg").textContent = labels.length
+    ? `Macro-average across ${labels.length} entity types — Precision ${(sumP/labels.length*100).toFixed(0)}% · Recall ${(sumR/labels.length*100).toFixed(0)}% · F1 ${(sumF1/labels.length*100).toFixed(0)}%`
+    : "";
+};
+
+// ---- BIO dataset annotation tool ----
+const LABEL_OPTIONS = ["O", ...LABELS.flatMap(l => [`B-${l}`, `I-${l}`])];
+let ANNOT_TOKENS = [];
+let DATASET = [];
+try { DATASET.push(...JSON.parse(localStorage.getItem("tnlu_dataset") || "[]")); } catch (e) {}
+const saveDataset = () => { try { localStorage.setItem("tnlu_dataset", JSON.stringify(DATASET)); } catch (e) {} };
+
+function renderAnnotTokens() {
+  $("annotTokens").innerHTML = ANNOT_TOKENS.map((t, i) => {
+    const opts = LABEL_OPTIONS.map(o => `<option value="${o}" ${o === t.tag ? "selected" : ""}>${o}</option>`).join("");
+    return `<div class="tok"><b>${esc(t.token)}</b><select data-i="${i}">${opts}</select></div>`;
+  }).join("");
+  $("annotTokens").querySelectorAll("select").forEach(sel => {
+    sel.onchange = e => { ANNOT_TOKENS[+e.target.dataset.i].tag = e.target.value; };
+  });
+}
+
+$("annotLoad").onclick = async () => {
+  $("annotErr").textContent = "";
+  const text = $("annotText").value.trim();
+  if (!text) return;
+  try {
+    const d = await _origExtract(text);   // raw extract, skips the Extractor-tab-only enhance() hook
+    ANNOT_TOKENS = d.tokens.map(t => ({token: t.token, tag: t.tag}));
+    renderAnnotTokens();
+    $("annotEditor").style.display = "block";
+  } catch (e) {
+    $("annotErr").textContent = "Cannot reach the backend. Start it with: python app.py";
+  }
+};
+$("annotCancel").onclick = () => { $("annotEditor").style.display = "none"; };
+
+function renderDatasetList() {
+  $("annotCount").textContent = DATASET.length;
+  $("annotList").innerHTML = DATASET.length
+    ? DATASET.map((d, i) => `<div class="hist-item" data-i="${i}">${esc(d.tokens.map(t => t.token).join(" "))}
+        <small>${d.tokens.length} tokens · ${d.tokens.filter(t => t.tag !== "O").length} tagged</small></div>`).join("")
+    : `<p class="sub" style="margin:0">No sentences added yet — tokenize one above and add it.</p>`;
+  $("annotList").querySelectorAll(".hist-item").forEach(el => el.onclick = () => {
+    const i = +el.dataset.i;
+    if (confirm("Remove this sentence from the dataset?")) { DATASET.splice(i, 1); saveDataset(); renderDatasetList(); }
+  });
+}
+
+$("annotAdd").onclick = () => {
+  if (!ANNOT_TOKENS.length) return;
+  DATASET.push({tokens: ANNOT_TOKENS.map(t => ({token: t.token, tag: t.tag}))});
+  saveDataset();
+  renderDatasetList();
+  $("annotEditor").style.display = "none";
+  $("annotText").value = "";
+};
+
+$("annotExportJsonl").onclick = () => {
+  if (!DATASET.length) { alert("Dataset is empty."); return; }
+  const lines = DATASET.map(d => JSON.stringify({tokens: d.tokens.map(t => t.token), tags: d.tokens.map(t => t.tag)}));
+  download("travel-bio-dataset.jsonl", lines.join("\n"), "application/json");
+};
+$("annotExportConll").onclick = () => {
+  if (!DATASET.length) { alert("Dataset is empty."); return; }
+  const blocks = DATASET.map(d => d.tokens.map(t => `${t.token}\t${t.tag}`).join("\n"));
+  download("travel-bio-dataset.conll", blocks.join("\n\n") + "\n", "text/plain");
+};
+$("annotClear").onclick = () => { if (confirm("Clear the whole annotated dataset?")) { DATASET = []; saveDataset(); renderDatasetList(); } };
+
+document.querySelector('nav button[data-view="annotate"]').addEventListener("click", renderDatasetList);
+renderDatasetList();
+</script>
+<script src="home.js"></script>
+</body>
+</html>
